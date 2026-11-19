@@ -1,0 +1,736 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Báo cáo bảo trì</title>
+<script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
+<style>
+  :root{
+    --g:#00A651; --g-d:#008a43; --g-l:#e8f7ee; --g-ll:#f4fbf7;
+    --ink:#1d2621; --mute:#66736b; --line:#dfe6e1; --bg:#ffffff; --bg2:#f6f8f7;
+    --warn:#b45309; --warn-l:#fff7e6; --err:#c62828; --err-l:#fdecec; --pick:#fff2cc;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%}
+  body{font:13px/1.35 "Segoe UI",-apple-system,"Helvetica Neue",Arial,sans-serif;color:var(--ink);background:var(--bg);
+       display:flex;flex-direction:column}
+  button{font:inherit;cursor:pointer}
+  button:disabled{cursor:default;opacity:.4}
+  input[type=text]{font:inherit;width:100%;padding:6px 8px;border:1px solid var(--line);border-radius:6px;outline:none}
+  input[type=text]:focus{border-color:var(--g);box-shadow:0 0 0 2px var(--g-l)}
+
+  header{background:var(--g);color:#fff;padding:10px 12px 0}
+  header .top{display:flex;align-items:center;gap:8px}
+  header h1{font-size:15px;margin:0;font-weight:700;flex:1;letter-spacing:.2px}
+  header .reload{background:rgba(255,255,255,.15);border:0;color:#fff;border-radius:6px;padding:4px 8px}
+  header .reload:hover{background:rgba(255,255,255,.28)}
+  .tabs{display:flex;gap:2px;margin-top:8px}
+  .tabs button{flex:1;border:0;background:transparent;color:#d9f5e4;padding:7px 4px 8px;border-radius:6px 6px 0 0;font-weight:600}
+  .tabs button.on{background:#fff;color:var(--g-d)}
+
+  .banner{padding:7px 12px;font-size:12px;border-bottom:1px solid var(--line)}
+  .banner.demo{background:var(--warn-l);color:var(--warn)}
+  .banner.err{background:var(--err-l);color:var(--err)}
+  .banner.ok{background:var(--g-l);color:var(--g-d)}
+
+  main{flex:1;overflow:auto;min-height:0}
+  section{padding:10px 12px}
+  h2{font-size:11px;letter-spacing:.6px;text-transform:uppercase;color:var(--mute);margin:0 0 6px;font-weight:700;
+     display:flex;align-items:center;gap:6px}
+  h2 .n{background:var(--bg2);border-radius:9px;padding:0 6px;font-size:11px;color:var(--mute)}
+
+  .tools{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px}
+  .tools button{border:1px solid var(--line);background:#fff;border-radius:6px;padding:4px 7px;min-width:28px}
+  .tools button:hover:not(:disabled){border-color:var(--g);color:var(--g-d)}
+  .tools .sp{flex:1}
+  .tools .add{background:var(--g);border-color:var(--g);color:#fff;font-weight:600}
+  .tools .add:hover:not(:disabled){background:var(--g-d);color:#fff}
+
+  .form{border:1px solid var(--g);background:var(--g-ll);border-radius:8px;padding:8px;margin-bottom:8px;display:grid;gap:6px}
+  .form .ttl{font-weight:600;color:var(--g-d)}
+  .form .row{display:flex;gap:6px;justify-content:flex-end}
+  .btn{border:1px solid var(--line);background:#fff;border-radius:6px;padding:5px 10px}
+  .btn.pri{background:var(--g);border-color:var(--g);color:#fff;font-weight:600}
+  .btn.pri:hover:not(:disabled){background:var(--g-d)}
+  .btn.dan{background:var(--err);border-color:var(--err);color:#fff;font-weight:600}
+  .form .hint{font-size:11px;color:var(--mute)}
+  .form .bad{color:var(--err);font-size:12px}
+
+  .dm{border:1px solid var(--line);border-radius:8px;overflow:hidden;max-height:34vh;overflow-y:auto}
+  .dm-item{display:flex;align-items:center;gap:6px;padding:6px 8px;border-bottom:1px solid var(--line);cursor:pointer;user-select:none}
+  .dm-item:last-child{border-bottom:0}
+  .dm-item:hover{background:var(--bg2)}
+  .dm-item.sel{background:var(--g-l);box-shadow:inset 3px 0 0 var(--g)}
+  .dm-item .num{color:var(--mute);font-variant-numeric:tabular-nums;min-width:34px;font-size:12px}
+  .dm-item .nm{flex:1;min-width:0}
+  .dm-item .nm b{font-weight:600;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .dm-item .nm i{font-style:normal;color:var(--mute);font-size:11px;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .dm-item .cnt{font-size:11px;background:var(--bg2);border-radius:9px;padding:1px 7px;color:var(--mute)}
+  .dm-item.sel .cnt{background:#fff;color:var(--g-d);font-weight:600}
+  .empty{padding:14px 10px;color:var(--mute);text-align:center;font-size:12px}
+
+  .seg{display:flex;border:1px solid var(--line);border-radius:7px;overflow:hidden;margin-bottom:6px}
+  .seg button{flex:1;border:0;background:#fff;padding:5px 2px;font-size:12px;border-right:1px solid var(--line);white-space:nowrap}
+  .seg button:last-child{border-right:0}
+  .seg button.on{background:var(--g);color:#fff;font-weight:600}
+  .search{margin-bottom:6px}
+  .allrow{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--mute);padding:2px 2px 6px}
+  .tb{border:1px solid var(--line);border-radius:8px;overflow:hidden}
+  .grp{background:var(--bg2);font-size:11px;font-weight:700;color:var(--mute);padding:4px 8px;border-bottom:1px solid var(--line);letter-spacing:.3px}
+  .tb-item{display:flex;align-items:flex-start;gap:7px;padding:6px 8px;border-bottom:1px solid var(--line);cursor:pointer;user-select:none}
+  .tb-item:last-child{border-bottom:0}
+  .tb-item:hover{background:var(--bg2)}
+  .tb-item.on{background:var(--pick)}
+  .tb-item input{margin:2px 0 0}
+  .tb-item .b{flex:1;min-width:0}
+  .tb-item .t1{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .tb-item .t2{font-size:11px;color:var(--mute);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .badge{font-size:11px;border-radius:9px;padding:1px 7px;white-space:nowrap;max-width:42%;overflow:hidden;text-overflow:ellipsis;align-self:center}
+  .badge.on{background:var(--g-l);color:var(--g-d)}
+  .badge.off{background:var(--bg2);color:var(--mute)}
+  .badge.bad{background:var(--err-l);color:var(--err)}
+  .lost{color:var(--err);font-size:11px}
+
+  footer{border-top:1px solid var(--line);background:#fff;padding:8px 12px;display:grid;gap:6px}
+  footer .acts{display:flex;gap:6px;align-items:center}
+  footer .assign{flex:1;background:var(--g);border:0;color:#fff;border-radius:7px;padding:8px 8px;font-weight:600;text-align:left;
+                 white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  footer .assign:hover:not(:disabled){background:var(--g-d)}
+  footer .sec{border:1px solid var(--line);background:#fff;border-radius:7px;padding:7px 9px}
+  footer .save{display:flex;align-items:center;gap:8px}
+  footer .save .btn{white-space:nowrap}
+  footer .save small{color:var(--mute);font-size:11px;line-height:1.3}
+
+  .tree{font-size:13px}
+  .tree .h{display:flex;gap:8px;padding:4px 0}
+  .tree .h .num{color:var(--g-d);font-weight:700;min-width:44px;font-variant-numeric:tabular-nums}
+  .tree .h b{font-weight:600}
+  .tree .h i{display:block;font-style:normal;color:var(--mute);font-size:11px}
+  .tree .d{display:flex;gap:8px;padding:2px 0;color:#2f3a34}
+  .tree .d .num{color:var(--mute);min-width:44px;font-variant-numeric:tabular-nums;font-size:12px}
+  .tree .d small{color:var(--mute)}
+  .warn{background:var(--warn-l);color:var(--warn);border-radius:8px;padding:8px 10px;font-size:12px;margin-bottom:8px}
+  .warn ul{margin:4px 0 0 16px;padding:0}
+  .steps{background:var(--bg2);border-radius:8px;padding:8px 10px;font-size:12px;color:#3c4a42}
+  .steps ol{margin:4px 0 0 16px;padding:0}
+  .spin{display:inline-block;width:10px;height:10px;border:2px solid #fff;border-right-color:transparent;border-radius:50%;animation:s .7s linear infinite;vertical-align:-1px}
+  @keyframes s{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<header>
+  <div class="top">
+    <h1>Báo cáo bảo trì</h1>
+    <button class="reload" data-act="reload" title="Đọc lại dữ liệu từ sheet (sau khi sửa tay trong Excel)">⟳ Tải lại</button>
+  </div>
+  <div class="tabs" id="tabs">
+    <button data-tab="gan" class="on">Gán thiết bị</button>
+    <button data-tab="cau">Cấu trúc báo cáo</button>
+  </div>
+</header>
+<div id="banner"></div>
+<main id="main"><div class="empty">Đang tải…</div></main>
+<footer id="foot"></footer>
+
+<script>
+/* =====================================================================
+   ADD-IN "BÁO CÁO BẢO TRÌ" cho Excel
+   Đọc/ghi 2 sheet của file BAO_CAO_BAO_TRI.xlsx (do CHAY_BAO_CAO tạo):
+     DE_MUC   : A Cấp | B Tên đề mục | C Tên tiếng Anh
+     THIET_BI : A Đề mục | B Tệp Excel | C Sheet | D Dòng | E Đối tượng | F Trạm
+                | G Tên / chỉ danh | H Số máy / số seri | I Khối mẫu | J Ghi chú
+   Mỗi thao tác: đọc lại sheet -> sửa -> ghi lại ngay, nên sửa tay trong
+   Excel cũng không bị ghi đè bởi dữ liệu cũ.
+   ===================================================================== */
+const DM = "DE_MUC", TB = "THIET_BI";
+const DM_HEAD = ["Cấp", "Tên đề mục", "Tên tiếng Anh (dòng phụ)"];
+const TB_HEAD = ["Đề mục", "Tệp Excel", "Sheet", "Dòng", "Đối tượng", "Trạm",
+                 "Tên / chỉ danh", "Số máy / số seri", "Khối mẫu (trống = tự chọn)", "Ghi chú"];
+const MAX_CAP = 8;
+
+const S = {
+  dm: [], tb: [], loaded: false, missing: false,
+  sel: null,                 // tên (chuẩn hoá) của đề mục đang chọn
+  checked: new Set(),        // khoá thiết bị đang tích
+  lastClick: null,
+  view: "chua", q: "", tab: "gan",
+  form: null,                // {mode:'add'|'child'|'edit', ten, en, err}
+  confirmDel: false,
+  busy: false, msg: null,
+  ver: 0,                    // tăng mỗi lần ghi -> bỏ kết quả đọc cũ về muộn
+};
+
+/* ----------------------------------------------------------- tiện ích */
+const nk = s => String(s ?? "").normalize("NFC").replace(/\s+/g, " ").trim().toUpperCase();
+const str = v => (v === null || v === undefined) ? "" : String(v).trim();
+const keyOf = d => [d.tep.toLowerCase(), d.sheet, String(d.dong)].join("|");
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const clampCap = c => Math.min(MAX_CAP, Math.max(1, c));
+
+function parseDM(rows) {
+  const out = [];
+  for (const r of rows) {
+    const ten = str(r[1]);
+    if (!ten) continue;
+    const c = parseInt(str(r[0]), 10);
+    out.push({ cap: clampCap(isNaN(c) ? 1 : c), ten, en: str(r[2]) });
+  }
+  return out;
+}
+function parseTB(rows) {
+  const out = [];
+  for (const r of rows) {
+    const d = { deMuc: str(r[0]), tep: str(r[1]), sheet: str(r[2]), dong: str(r[3]),
+                doiTuong: str(r[4]), tram: str(r[5]), ten: str(r[6]), so: str(r[7]),
+                khoi: str(r[8]), ghiChu: str(r[9]) };
+    if (!d.tep && !d.sheet && !d.dong) continue;
+    out.push(d);
+  }
+  return out;
+}
+const rowDM = d => [d.cap, d.ten, d.en || ""];
+const rowTB = d => [d.deMuc || "", d.tep, d.sheet, (/^\d+$/.test(d.dong) ? Number(d.dong) : d.dong),
+                    d.doiTuong, d.tram, d.ten, d.so, d.khoi || "", d.ghiChu || ""];
+const colL = n => String.fromCharCode(64 + n);
+
+/* ------------------------------------------------- đọc/ghi trong Excel */
+const ExcelIO = {
+  async load() {
+    return Excel.run(async ctx => {
+      const wss = ctx.workbook.worksheets;
+      const a = wss.getItemOrNullObject(DM), b = wss.getItemOrNullObject(TB);
+      await ctx.sync();
+      if (a.isNullObject || b.isNullObject) return { missing: true };
+      const ua = a.getUsedRangeOrNullObject(true), ub = b.getUsedRangeOrNullObject(true);
+      ua.load("rowIndex,rowCount"); ub.load("rowIndex,rowCount");
+      await ctx.sync();
+      const lastA = ua.isNullObject ? 1 : ua.rowIndex + ua.rowCount;
+      const lastB = ub.isNullObject ? 1 : ub.rowIndex + ub.rowCount;
+      let ra = null, rb = null;
+      if (lastA >= 2) { ra = a.getRange(`A2:C${lastA}`); ra.load("values"); }
+      if (lastB >= 2) { rb = b.getRange(`A2:J${lastB}`); rb.load("values"); }
+      await ctx.sync();
+      return { dm: parseDM(ra ? ra.values : []), tb: parseTB(rb ? rb.values : []), lastA, lastB };
+    });
+  },
+  async save(data) {
+    return Excel.run(async ctx => {
+      const a = ctx.workbook.worksheets.getItem(DM), b = ctx.workbook.worksheets.getItem(TB);
+      const nA = data.dm.length, nB = data.tb.length;
+      if (nA) a.getRange(`A2:C${nA + 1}`).values = data.dm.map(rowDM);
+      if (data.lastA > nA + 1) a.getRange(`A${nA + 2}:C${data.lastA}`).clear(Excel.ClearApplyTo.contents);
+      if (nB) b.getRange(`A2:J${nB + 1}`).values = data.tb.map(rowTB);
+      if (data.lastB > nB + 1) b.getRange(`A${nB + 2}:J${data.lastB}`).clear(Excel.ClearApplyTo.contents);
+      await ctx.sync();
+    });
+  },
+  async createSheets() {
+    return Excel.run(async ctx => {
+      const wss = ctx.workbook.worksheets;
+      for (const [name, head] of [[DM, DM_HEAD], [TB, TB_HEAD]]) {
+        let ws = wss.getItemOrNullObject(name);
+        await ctx.sync();
+        if (ws.isNullObject) ws = wss.add(name);
+        const r = ws.getRange(`A1:${colL(head.length)}1`);
+        r.values = [head];
+        r.format.font.bold = true; r.format.font.color = "#FFFFFF"; r.format.fill.color = "#00A651";
+        r.format.wrapText = true;
+        if (Office.context.requirements.isSetSupported("ExcelApi", "1.7")) ws.freezePanes.freezeRows(1);
+      }
+      await ctx.sync();
+    });
+  },
+  canSave: () => Office.context.requirements.isSetSupported("ExcelApi", "1.11"),
+  async saveFile() {
+    return Excel.run(async ctx => { ctx.workbook.save(Excel.SaveBehavior.save); await ctx.sync(); });
+  },
+};
+
+/* ---------------------- chế độ xem thử khi mở trang ngoài Excel */
+const DemoIO = (() => {
+  let dm = [
+    { cap: 1, ten: "Khu vực tủ Trung Thế", en: "Medium voltage cabinets area" },
+    { cap: 2, ten: "Tủ RMU-01", en: "RMU-01 cabinet" },
+    { cap: 2, ten: "Tủ RMU-02", en: "RMU-02 cabinet" },
+    { cap: 1, ten: "Khu vực máy biến áp", en: "Transformer area" },
+  ];
+  const T = (tep, sheet, dong, doiTuong, ten, so, deMuc = "") =>
+    ({ deMuc, tep, sheet, dong: String(dong), doiTuong, tram: "Trạm 22 kV Test", ten, so, khoi: "", ghiChu: "" });
+  let tb = [
+    T("Cáp trung the.xlsx", "2_ThietBi", 7, "CÁP TRUNG THẾ", "Cáp lộ 471 - MBA T1", "000601", "Tủ RMU-01"),
+    T("Cáp trung the.xlsx", "2_ThietBi", 8, "CÁP TRUNG THẾ", "Cáp lộ 472 - MBA T2", "000602"),
+    T("DAO_CAT_TAI LBS.xlsx", "2_ThietBi", 7, "DAO CẮT TẢI (LBS)", "LBS ngăn lộ 471", "LB-2401", "Tủ RMU-01"),
+    T("DAO_CAT_TAI LBS.xlsx", "2_ThietBi", 8, "DAO CẮT TẢI (LBS)", "LBS ngăn lộ 472", "LB-2402"),
+    T("MAY_BIEN_AP_DAU.xlsx", "có 1 cuộn hạ", 8, "MÁY BIẾN ÁP DẦU", "MBA T1", "MBA-1001"),
+    T("MAY_CAT_TRUNG_THE.xlsx", "2_ThietBi", 7, "MÁY CẮT TRUNG THẾ", "Máy cắt tổng 431", "CB-2401"),
+  ];
+  const clone = x => JSON.parse(JSON.stringify(x));
+  return {
+    async load() { return { dm: clone(dm), tb: clone(tb), lastA: dm.length + 1, lastB: tb.length + 1 }; },
+    async save(d) { dm = clone(d.dm); tb = clone(d.tb); },
+    async createSheets() {},
+    canSave: () => false,
+    async saveFile() {},
+  };
+})();
+
+let IO = DemoIO, IN_EXCEL = false;
+
+/* ------------------------------------------------------- đề mục: cây */
+function subtreeEnd(dm, i) {
+  let j = i + 1;
+  while (j < dm.length && dm[j].cap > dm[i].cap) j++;
+  return j;
+}
+// Đánh số giống Word: mỗi thiết bị cũng là 1 đề mục, thấp hơn đề mục chứa nó
+// 1 cấp và đứng NGAY SAU đề mục đó (trước các mục con) -> đếm chung với mục con.
+function outline(dm, tb) {
+  const names = new Set(dm.map(d => nk(d.ten)));
+  const byDm = {};
+  for (const d of tb) { const k = nk(d.deMuc); if (k && names.has(k)) (byDm[k] = byDm[k] || []).push(d); }
+  const cnt = Array(10).fill(0), items = [], headNum = [];
+  const push = (level, kind, ref) => {
+    cnt[level - 1]++;
+    for (let k = level; k < 10; k++) cnt[k] = 0;
+    const num = cnt.slice(0, level).join(".");
+    items.push({ level, kind, ref, num });
+    return num;
+  };
+  dm.forEach(d => {
+    headNum.push(push(d.cap, "h", d));
+    for (const t of byDm[nk(d.ten)] || []) push(Math.min(d.cap + 1, 9), "d", t);
+  });
+  return { items, headNum };
+}
+const numbering = dm => outline(dm, S.tb).headNum;
+const idxSel = dm => dm.findIndex(d => nk(d.ten) === S.sel);
+
+/* -------------------------------------------- thao tác: đọc - sửa - ghi */
+async function reload(silent) {
+  const v = S.ver;
+  try {
+    const data = await IO.load();
+    if (v !== S.ver) return;                        // vừa có thao tác ghi -> dữ liệu này đã cũ
+    S.missing = !!data.missing;
+    if (!data.missing) { S.dm = data.dm; S.tb = data.tb; }
+    S.loaded = true;
+    if (S.sel && !S.dm.some(d => nk(d.ten) === S.sel)) S.sel = null;
+    const keys = new Set(S.tb.map(keyOf));
+    for (const k of [...S.checked]) if (!keys.has(k)) S.checked.delete(k);
+    if (!silent) flash("ok", "Đã đọc lại dữ liệu từ sheet.");
+  } catch (e) { flash("err", "Không đọc được sheet: " + (e.message || e)); }
+  render();
+}
+
+async function mutate(fn, okMsg) {
+  if (S.busy) return;
+  S.busy = true; render();
+  try {
+    const data = await IO.load();
+    if (data.missing) { S.missing = true; return; }
+    const res = fn(data);
+    if (res === false) return;                       // thao tác tự huỷ (đã báo lỗi)
+    await IO.save(data);
+    S.ver++;
+    S.dm = data.dm; S.tb = data.tb;
+    if (okMsg) flash("ok", typeof okMsg === "function" ? okMsg() : okMsg);
+  } catch (e) {
+    flash("err", "Lỗi khi ghi vào sheet: " + (e.message || e));
+  } finally {
+    S.busy = false; render();
+  }
+}
+
+function nameTaken(dm, ten, exceptIdx = -1) {
+  return dm.some((d, i) => i !== exceptIdx && nk(d.ten) === nk(ten));
+}
+
+function submitForm() {
+  const f = S.form; if (!f) return;
+  const ten = str(document.getElementById("f-ten").value);
+  const en = str(document.getElementById("f-en").value);
+  if (!ten) { f.err = "Chưa gõ tên đề mục."; render(); return; }
+  const mode = f.mode;
+  let newSel = nk(ten);
+  mutate(data => {
+    const dm = data.dm, i = dm.findIndex(d => nk(d.ten) === S.sel);
+    if (mode === "edit") {
+      if (i < 0) return false;
+      if (nameTaken(dm, ten, i)) { f.err = "Tên này đã có. Mỗi đề mục phải có tên khác nhau."; return false; }
+      const old = nk(dm[i].ten);
+      dm[i].ten = ten; dm[i].en = en;
+      for (const d of data.tb) if (nk(d.deMuc) === old) d.deMuc = ten;   // thiết bị đi theo tên mới
+    } else {
+      if (nameTaken(dm, ten)) { f.err = "Tên này đã có. Mỗi đề mục phải có tên khác nhau."; return false; }
+      let cap = 1, at = dm.length;
+      if (i >= 0) {
+        cap = mode === "child" ? clampCap(dm[i].cap + 1) : dm[i].cap;
+        at = subtreeEnd(dm, i);
+      }
+      dm.splice(at, 0, { cap, ten, en });
+    }
+    S.form = null; S.sel = newSel;
+  }, mode === "edit" ? "Đã sửa đề mục." : "Đã thêm đề mục.").then(() => { if (S.form) render(); });
+}
+
+function headingAct(act) {
+  if (act === "add" || act === "child") {
+    if (act === "child" && !S.sel) return;
+    S.form = { mode: act, ten: "", en: "", err: "" }; S.confirmDel = false; render(); focusForm(); return;
+  }
+  if (act === "edit") {
+    const d = S.dm[idxSel(S.dm)]; if (!d) return;
+    S.form = { mode: "edit", ten: d.ten, en: d.en, err: "" }; S.confirmDel = false; render(); focusForm(); return;
+  }
+  if (act === "del") { if (S.sel) { S.confirmDel = true; S.form = null; render(); } return; }
+  if (act === "delYes") {
+    S.confirmDel = false;
+    return mutate(data => {
+      const i = data.dm.findIndex(d => nk(d.ten) === S.sel); if (i < 0) return false;
+      const old = nk(data.dm[i].ten);
+      data.dm.splice(i, 1);
+      for (const d of data.tb) if (nk(d.deMuc) === old) d.deMuc = "";
+      S.sel = null;
+    }, "Đã xoá đề mục. Thiết bị của mục đó chuyển về 'chưa gán'.");
+  }
+  if (act === "delNo") { S.confirmDel = false; render(); return; }
+  // di chuyển / đổi cấp: luôn đi cả nhánh con
+  mutate(data => {
+    const dm = data.dm, i = dm.findIndex(d => nk(d.ten) === S.sel); if (i < 0) return false;
+    const e = subtreeEnd(dm, i), c = dm[i].cap;
+    if (act === "up") {
+      let p = i - 1; while (p >= 0 && dm[p].cap > c) p--;
+      if (p < 0 || dm[p].cap !== c) return false;
+      const block = dm.splice(i, e - i); dm.splice(p, 0, ...block);
+    } else if (act === "down") {
+      if (e >= dm.length || dm[e].cap !== c) return false;
+      const e2 = subtreeEnd(dm, e);
+      const next = dm.splice(e, e2 - e); dm.splice(i, 0, ...next);
+    } else if (act === "in") {
+      if (i === 0 || dm[i - 1].cap < c) return false;            // phải có mục đứng trước cùng cấp
+      if (dm.slice(i, e).some(d => d.cap >= MAX_CAP)) return false;
+      for (let k = i; k < e; k++) dm[k].cap++;
+    } else if (act === "out") {
+      if (c <= 1) return false;
+      for (let k = i; k < e; k++) dm[k].cap = clampCap(dm[k].cap - 1);
+    }
+  });
+}
+
+function assign(clear) {
+  const target = S.dm[idxSel(S.dm)];
+  if (!S.checked.size || (!clear && !target)) return;
+  const keys = new Set(S.checked);
+  const n = keys.size;
+  mutate(data => {
+    const tb = data.tb;
+    const picked = tb.filter(d => keys.has(keyOf(d)));
+    if (!picked.length) return false;
+    if (clear) { for (const d of picked) d.deMuc = ""; return; }
+    // Thiết bị vừa gán xếp NỐI TIẾP sau các thiết bị đã có của đề mục đó
+    const rest = tb.filter(d => !keys.has(keyOf(d)));
+    for (const d of picked) d.deMuc = target.ten;
+    let at = -1;
+    rest.forEach((d, k) => { if (nk(d.deMuc) === nk(target.ten)) at = k; });
+    at = at < 0 ? rest.length : at + 1;
+    rest.splice(at, 0, ...picked);
+    data.tb.splice(0, data.tb.length, ...rest);
+  }, clear ? `Đã bỏ gán ${n} thiết bị.` : `Đã gán ${n} thiết bị vào "${target.ten}".`)
+  .then(() => { S.checked.clear(); render(); });
+}
+
+function moveDevice(dir) {
+  if (S.checked.size !== 1 || !S.sel) return;
+  const k = [...S.checked][0];
+  mutate(data => {
+    const tb = data.tb, i = tb.findIndex(d => keyOf(d) === k); if (i < 0) return false;
+    const same = j => nk(tb[j].deMuc) === nk(tb[i].deMuc);
+    let j = i + dir;
+    while (j >= 0 && j < tb.length && !same(j)) j += dir;
+    if (j < 0 || j >= tb.length) return false;
+    [tb[i], tb[j]] = [tb[j], tb[i]];
+  });
+}
+
+async function createSheets() {
+  try { await IO.createSheets(); flash("ok", "Đã tạo 2 sheet DE_MUC và THIET_BI."); }
+  catch (e) { flash("err", "Không tạo được sheet: " + (e.message || e)); }
+  reload(true);
+}
+
+async function saveFile() {
+  if (!IO.canSave()) { flash("ok", "Bấm Ctrl+S (Mac: ⌘S) để lưu file, rồi bấm đúp CHAY_BAO_CAO.bat."); render(); return; }
+  try { S.busy = true; render(); await IO.saveFile(); flash("ok", "Đã lưu file. Giờ bấm đúp CHAY_BAO_CAO.bat để ra báo cáo Word."); }
+  catch (e) { flash("err", "Không lưu được: " + (e.message || e) + " — bấm Ctrl+S để lưu."); }
+  finally { S.busy = false; render(); }
+}
+
+/* --------------------------------------------------------------- vẽ */
+let flashTimer = null;
+function flash(kind, text) {
+  S.msg = { kind, text };
+  clearTimeout(flashTimer);
+  if (kind === "ok") flashTimer = setTimeout(() => { S.msg = null; renderBanner(); }, 4000);
+  renderBanner();
+}
+function renderBanner() {
+  const b = document.getElementById("banner");
+  let h = "";
+  if (!IN_EXCEL) h += `<div class="banner demo">Đang xem thử ngoài Excel — dữ liệu mẫu, không ghi vào file nào.</div>`;
+  if (S.msg) h += `<div class="banner ${S.msg.kind}">${esc(S.msg.text)}</div>`;
+  b.innerHTML = h;
+}
+
+function visibleDevices() {
+  const q = nk(S.q);
+  const names = new Set(S.dm.map(d => nk(d.ten)));
+  return S.tb.filter(d => {
+    const dmk = nk(d.deMuc);
+    if (S.view === "chua" && dmk && names.has(dmk)) return false;
+    if (S.view === "muc" && (!S.sel || dmk !== S.sel)) return false;
+    if (q && !nk([d.ten, d.so, d.tram, d.doiTuong, d.tep, d.deMuc].join(" ")).includes(q)) return false;
+    return true;
+  });
+}
+
+function renderGan() {
+  const dm = S.dm, nums = numbering(dm), names = new Set(dm.map(d => nk(d.ten)));
+  const cnt = {};
+  for (const d of S.tb) { const k = nk(d.deMuc); if (k) cnt[k] = (cnt[k] || 0) + 1; }
+  const i = idxSel(dm), has = i >= 0, b = S.busy ? "disabled" : "";
+  const sel = has ? dm[i] : null;
+
+  let h = `<section><h2>Đề mục <span class="n">${dm.length}</span></h2>
+    <div class="tools">
+      <button class="add" data-act="h-add" ${b} title="Thêm đề mục cùng cấp với mục đang chọn (chưa chọn thì thêm cấp 1 ở cuối)">＋ Đề mục</button>
+      <button data-act="h-child" ${has ? b : "disabled"} title="Thêm đề mục con nằm trong mục đang chọn">＋ Mục con</button>
+      <span class="sp"></span>
+      <button data-act="h-up" ${has ? b : "disabled"} title="Đưa lên (cả mục con)">↑</button>
+      <button data-act="h-down" ${has ? b : "disabled"} title="Đưa xuống (cả mục con)">↓</button>
+      <button data-act="h-out" ${has ? b : "disabled"} title="Lên 1 cấp">←</button>
+      <button data-act="h-in" ${has ? b : "disabled"} title="Xuống 1 cấp (thành mục con của mục phía trên)">→</button>
+      <button data-act="h-edit" ${has ? b : "disabled"} title="Sửa tên">Sửa</button>
+      <button data-act="h-del" ${has ? b : "disabled"} title="Xoá đề mục">Xoá</button>
+    </div>`;
+
+  if (S.form) {
+    const f = S.form;
+    const ttl = f.mode === "edit" ? "Sửa đề mục" :
+                f.mode === "child" ? `Thêm mục con trong "${esc(sel ? sel.ten : "")}"` :
+                (sel ? `Thêm đề mục cùng cấp, sau "${esc(sel.ten)}"` : "Thêm đề mục cấp 1");
+    h += `<div class="form">
+      <div class="ttl">${ttl}</div>
+      <input type="text" id="f-ten" placeholder="Tên đề mục (vd: Tủ RMU-01)" value="${esc(f.ten)}">
+      <input type="text" id="f-en" placeholder="Tên tiếng Anh – dòng phụ (không bắt buộc)" value="${esc(f.en)}">
+      ${f.err ? `<div class="bad">${esc(f.err)}</div>` : ""}
+      <div class="row"><button class="btn" data-act="f-cancel">Huỷ</button><button class="btn pri" data-act="f-ok" ${b}>Lưu</button></div>
+    </div>`;
+  }
+  if (S.confirmDel && sel) {
+    const n = cnt[nk(sel.ten)] || 0;
+    h += `<div class="form" style="border-color:var(--err);background:var(--err-l)">
+      <div>Xoá đề mục <b>${esc(sel.ten)}</b>?${n ? ` ${n} thiết bị của mục này sẽ chuyển về "chưa gán".` : ""}
+      Các mục con (nếu có) vẫn giữ nguyên.</div>
+      <div class="row"><button class="btn" data-act="h-delNo">Không</button><button class="btn dan" data-act="h-delYes" ${b}>Xoá</button></div>
+    </div>`;
+  }
+
+  h += `<div class="dm">`;
+  if (!dm.length) h += `<div class="empty">Chưa có đề mục. Bấm <b>＋ Đề mục</b> để tạo.</div>`;
+  dm.forEach((d, k) => {
+    const on = nk(d.ten) === S.sel;
+    h += `<div class="dm-item${on ? " sel" : ""}" data-dm="${k}" style="padding-left:${8 + (d.cap - 1) * 16}px">
+      <span class="num">${nums[k]}</span>
+      <span class="nm"><b>${esc(d.ten)}</b>${d.en ? `<i>${esc(d.en)}</i>` : ""}</span>
+      <span class="cnt" title="Số thiết bị gán trực tiếp vào mục này">${cnt[nk(d.ten)] || 0}</span>
+    </div>`;
+  });
+  h += `</div></section>`;
+
+  // ---- thiết bị
+  const nChua = S.tb.filter(d => !nk(d.deMuc) || !names.has(nk(d.deMuc))).length;
+  const nMuc = has ? (cnt[nk(sel.ten)] || 0) : 0;
+  const vis = visibleDevices();
+  const allOn = vis.length && vis.every(d => S.checked.has(keyOf(d)));
+  h += `<section style="padding-top:0"><h2>Thiết bị <span class="n">${S.tb.length}</span></h2>
+    <div class="seg">
+      <button data-view="chua" class="${S.view === "chua" ? "on" : ""}">Chưa gán (${nChua})</button>
+      <button data-view="muc" class="${S.view === "muc" ? "on" : ""}" ${has ? "" : "disabled"}>Mục đang chọn (${nMuc})</button>
+      <button data-view="all" class="${S.view === "all" ? "on" : ""}">Tất cả (${S.tb.length})</button>
+    </div>
+    <div class="search"><input type="text" id="q" placeholder="Tìm theo tên, số máy, trạm, loại…" value="${esc(S.q)}"></div>`;
+
+  if (!S.tb.length) {
+    h += `<div class="steps"><b>Chưa có thiết bị nào.</b><ol>
+      <li>Chép các file Excel số liệu vào thư mục <b>Excel BBTN input</b>.</li>
+      <li>Đóng file này, bấm đúp <b>CHAY_BAO_CAO.bat</b> để nạp danh sách thiết bị.</li>
+      <li>Mở lại file này, bấm <b>⟳ Tải lại</b>.</li></ol></div>`;
+  } else {
+    h += `<label class="allrow"><input type="checkbox" data-act="all" ${allOn ? "checked" : ""}>
+      Chọn tất cả ${vis.length} thiết bị đang hiện · đã tích ${S.checked.size}</label><div class="tb">`;
+    if (!vis.length) h += `<div class="empty">${S.view === "chua" ? "Đã gán hết thiết bị." : "Không có thiết bị nào."}</div>`;
+    let lastGrp = null;
+    for (const d of vis) {
+      if (S.view !== "muc" && d.doiTuong !== lastGrp) { lastGrp = d.doiTuong; h += `<div class="grp">${esc(d.doiTuong || "(không rõ loại)")}</div>`; }
+      const k = keyOf(d), on = S.checked.has(k), dmk = nk(d.deMuc);
+      const badge = !dmk ? `<span class="badge off">chưa gán</span>` :
+                    names.has(dmk) ? `<span class="badge on" title="${esc(d.deMuc)}">${esc(d.deMuc)}</span>` :
+                    `<span class="badge bad" title="Đề mục này không còn trong danh sách">${esc(d.deMuc)} ?</span>`;
+      const t2 = [S.view === "muc" ? d.doiTuong : "", d.tram, d.so].filter(Boolean).join(" · ");
+      h += `<div class="tb-item${on ? " on" : ""}" data-k="${esc(k)}">
+        <input type="checkbox" ${on ? "checked" : ""} tabindex="-1">
+        <div class="b"><div class="t1">${esc(d.ten || d.so || (d.tep + " dòng " + d.dong))}</div>
+          <div class="t2">${esc(t2)}${d.ghiChu ? ` <span class="lost">· ${esc(d.ghiChu)}</span>` : ""}</div></div>
+        ${badge}</div>`;
+    }
+    h += `</div>`;
+  }
+  h += `</section>`;
+  return h;
+}
+
+function renderCau() {
+  const dm = S.dm, names = new Set(dm.map(d => nk(d.ten)));
+  const warns = [];
+  if (dm.length && dm[0].cap > 1) warns.push(`Đề mục đầu tiên đang ở cấp ${dm[0].cap}; Word sẽ đánh số kiểu "0.1". Nên để cấp 1.`);
+  dm.forEach((d, k) => { if (k && d.cap > dm[k - 1].cap + 1) warns.push(`"${d.ten}" nhảy từ cấp ${dm[k - 1].cap} lên cấp ${d.cap} (bỏ qua 1 cấp).`); });
+  const orphan = S.tb.filter(d => nk(d.deMuc) && !names.has(nk(d.deMuc)));
+  if (orphan.length) warns.push(`${orphan.length} thiết bị gán vào đề mục không còn tồn tại – sẽ bị bỏ qua.`);
+  const lost = S.tb.filter(d => nk(d.deMuc) && d.ghiChu);
+  if (lost.length) warns.push(`${lost.length} thiết bị đã gán nhưng không còn file Excel trong thư mục input – sẽ bị bỏ qua.`);
+  const nChua = S.tb.filter(d => !nk(d.deMuc)).length;
+
+  let h = `<section>`;
+  if (warns.length) h += `<div class="warn"><b>Cần xem lại</b><ul>${warns.map(w => `<li>${esc(w)}</li>`).join("")}</ul></div>`;
+  h += `<h2>Báo cáo sẽ in theo thứ tự này</h2><div class="tree">`;
+  if (!dm.length) h += `<div class="empty">Chưa có đề mục.</div>`;
+  for (const it of outline(dm, S.tb).items) {
+    const pad = (it.level - 1) * 14;
+    if (it.kind === "h") h += `<div class="h" style="padding-left:${pad}px"><span class="num">${it.num}</span>
+          <span><b>${esc(it.ref.ten)}</b>${it.ref.en ? `<i>${esc(it.ref.en)}</i>` : ""}</span></div>`;
+    else h += `<div class="d" style="padding-left:${pad}px"><span class="num">${it.num}</span>
+          <span>${esc(it.ref.ten || it.ref.so)} <small>· ${esc(it.ref.doiTuong)}</small></span></div>`;
+  }
+  h += `</div>`;
+  if (nChua) h += `<p style="color:var(--mute);font-size:12px">${nChua} thiết bị chưa gán đề mục – không đưa vào báo cáo.</p>`;
+  h += `<p style="color:var(--mute);font-size:12px">Số thứ tự ở đây để xem trước, trong Word số do Word tự đánh theo cấp đề mục.
+       Thiết bị in ngay dưới đề mục của nó, trước các mục con.</p></section>`;
+  return h;
+}
+
+function renderFoot() {
+  const f = document.getElementById("foot");
+  if (!S.loaded || S.missing) { f.innerHTML = ""; return; }
+  const sel = S.dm[idxSel(S.dm)], n = S.checked.size, b = S.busy;
+  let h = "";
+  if (S.tab === "gan") {
+    const lbl = !n ? "Tích thiết bị để gán vào đề mục" :
+                !sel ? `Chọn 1 đề mục ở trên để gán ${n} thiết bị` :
+                `Gán ${n} thiết bị → ${sel.ten}`;
+    h += `<div class="acts">
+      <button class="assign" data-act="assign" ${(!n || !sel || b) ? "disabled" : ""} title="${esc(lbl)}">${b ? '<span class="spin"></span> ' : ""}${esc(lbl)}</button>
+      <button class="sec" data-act="unassign" ${(!n || b) ? "disabled" : ""} title="Bỏ gán các thiết bị đang tích">Bỏ gán</button>
+      ${S.view === "muc" ? `<button class="sec" data-act="d-up" ${n === 1 && !b ? "" : "disabled"} title="Đưa thiết bị lên">↑</button>
+      <button class="sec" data-act="d-down" ${n === 1 && !b ? "" : "disabled"} title="Đưa thiết bị xuống">↓</button>` : ""}
+    </div>`;
+  }
+  h += `<div class="save"><button class="btn pri" data-act="savefile" ${b ? "disabled" : ""}>Lưu file</button>
+        <small>Lưu xong, bấm đúp <b>CHAY_BAO_CAO.bat</b> để ra báo cáo Word.</small></div>`;
+  f.innerHTML = h;
+}
+
+function render() {
+  renderBanner();
+  document.querySelectorAll("#tabs button").forEach(x => x.classList.toggle("on", x.dataset.tab === S.tab));
+  const m = document.getElementById("main");
+  const keep = document.activeElement && document.activeElement.id;
+  const caret = keep ? [document.activeElement.selectionStart, document.activeElement.selectionEnd] : null;
+  const scroll = m.scrollTop;
+  if (!S.loaded) m.innerHTML = `<div class="empty">Đang tải…</div>`;
+  else if (S.missing) m.innerHTML = `<section><div class="steps"><b>File này chưa có sheet DE_MUC / THIET_BI.</b><br>
+      Add-in dùng cho file <b>BAO_CAO_BAO_TRI.xlsx</b> (do CHAY_BAO_CAO.bat tạo ra, nằm cạnh thư mục Excel BBTN input).
+      Hãy mở đúng file đó, hoặc tạo 2 sheet ngay trong file này.</div>
+      <p><button class="btn pri" data-act="mk">Tạo 2 sheet DE_MUC và THIET_BI</button></p></section>`;
+  else m.innerHTML = S.tab === "gan" ? renderGan() : renderCau();
+  m.scrollTop = scroll;
+  if (keep) {
+    const el = document.getElementById(keep);
+    if (el) { el.focus(); if (caret && el.setSelectionRange) try { el.setSelectionRange(caret[0], caret[1]); } catch (e) {} }
+  }
+  renderFoot();
+}
+function focusForm() { setTimeout(() => { const e = document.getElementById("f-ten"); if (e) { e.focus(); e.select(); } }, 0); }
+
+/* ----------------------------------------------------------- sự kiện */
+function onClick(ev) {
+  const t = ev.target;
+  const tab = t.closest("[data-tab]"); if (tab) { S.tab = tab.dataset.tab; render(); return; }
+  const view = t.closest("[data-view]"); if (view && !view.disabled) { S.view = view.dataset.view; S.checked.clear(); render(); return; }
+  const dmEl = t.closest("[data-dm]");
+  if (dmEl) {
+    const d = S.dm[+dmEl.dataset.dm]; if (!d) return;
+    S.sel = nk(d.ten);
+    S.form = null; S.confirmDel = false; render(); return;
+  }
+  const item = t.closest(".tb-item");
+  if (item) {
+    const k = item.dataset.k, vis = visibleDevices().map(keyOf);
+    if (ev.shiftKey && S.lastClick && vis.includes(S.lastClick)) {
+      const a = vis.indexOf(S.lastClick), b = vis.indexOf(k);
+      const on = !S.checked.has(k);
+      vis.slice(Math.min(a, b), Math.max(a, b) + 1).forEach(x => on ? S.checked.add(x) : S.checked.delete(x));
+    } else {
+      S.checked.has(k) ? S.checked.delete(k) : S.checked.add(k);
+    }
+    S.lastClick = k; render(); return;
+  }
+  const a = t.closest("[data-act]"); if (!a || a.disabled) return;
+  const act = a.dataset.act;
+  if (act === "all") { const vis = visibleDevices(); const on = a.checked; vis.forEach(d => on ? S.checked.add(keyOf(d)) : S.checked.delete(keyOf(d))); render(); return; }
+  if (act.startsWith("h-")) return headingAct(act.slice(2));
+  if (act === "f-ok") return submitForm();
+  if (act === "f-cancel") { S.form = null; render(); return; }
+  if (act === "assign") return assign(false);
+  if (act === "unassign") return assign(true);
+  if (act === "d-up") return moveDevice(-1);
+  if (act === "d-down") return moveDevice(1);
+  if (act === "reload") return reload(false);
+  if (act === "savefile") return saveFile();
+  if (act === "mk") return createSheets();
+}
+function onInput(ev) {
+  const t = ev.target;
+  if (t.id === "q") { S.q = t.value; render(); }
+  if (t.id === "f-ten" && S.form) S.form.ten = t.value;
+  if (t.id === "f-en" && S.form) S.form.en = t.value;
+}
+function onKey(ev) {
+  if (!S.form) return;
+  if ((ev.target.id === "f-ten" || ev.target.id === "f-en") && ev.key === "Enter") { ev.preventDefault(); submitForm(); }
+  if (ev.key === "Escape") { S.form = null; render(); }
+}
+
+document.addEventListener("click", onClick);
+document.addEventListener("input", onInput);
+document.addEventListener("keydown", onKey);
+
+/* ------------------------------------------------------------ khởi động */
+let started = false;
+function start(inExcel) {
+  if (started) return; started = true;
+  IN_EXCEL = inExcel; IO = inExcel ? ExcelIO : DemoIO;
+  reload(true);
+  if (inExcel) {
+    // Quay lại khung add-in sau khi sửa tay trong sheet -> tự đọc lại
+    let t = null;
+    window.addEventListener("focus", () => { clearTimeout(t); t = setTimeout(() => { if (!S.busy && !S.form) reload(true); }, 300); });
+  }
+}
+if (window.Office && Office.onReady) {
+  Office.onReady(info => start(info && info.host === Office.HostType.Excel));
+}
+setTimeout(() => start(false), 3000);   // không tải được office.js (mở ngoài Excel, mất mạng)
+</script>
+</body>
+</html>
